@@ -1,0 +1,26 @@
+# Environment variables
+.env
+*.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.vnv
+env/
+
+# Node
+node_modules/
+/frontend/build
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Emergent
+.emergent/
