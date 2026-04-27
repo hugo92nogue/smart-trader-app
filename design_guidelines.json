@@ -1,0 +1,106 @@
+{
+  "theme": "dark",
+  "archetype": "Archetype 2: Performance Pro",
+  "typography": {
+    "headings": {
+      "family": "Chivo",
+      "weights": ["400", "700", "900"],
+      "usage": "Headers, large data figures, metrics",
+      "tailwind_classes": "font-sans tracking-tight"
+    },
+    "body": {
+      "family": "IBM Plex Sans",
+      "weights": ["400", "500", "600"],
+      "usage": "Paragraphs, labels, general UI text",
+      "tailwind_classes": "font-sans leading-relaxed"
+    },
+    "mono": {
+      "family": "IBM Plex Mono",
+      "weights": ["400", "500", "600"],
+      "usage": "Prices, PNL, order book data, timeframes, AI terminal logs",
+      "tailwind_classes": "font-mono tracking-tight"
+    }
+  },
+  "colors": {
+    "background": "#09090b",
+    "surface": "#121214",
+    "surface_hover": "#1f1f22",
+    "border": "#27272a",
+    "primary": "#007AFF",
+    "text_primary": "#fafafa",
+    "text_secondary": "#a1a1aa",
+    "buy_success": "#34C759",
+    "sell_danger": "#FF3B30",
+    "warning": "#F5A623",
+    "ai_glow": "#A855F7",
+    "accent_cyan": "#06b6d4"
+  },
+  "spacing_and_layout": {
+    "philosophy": "Control Room Grid. High Density, Data Correlation, Scanability. Every pixel must be utilized. No empty floating spaces.",
+    "grid_system": "grid-cols-1 md:grid-cols-8 xl:grid-cols-12 gap-4",
+    "widget_padding": "p-3 sm:p-4",
+    "radius": "rounded-none or max rounded-sm to maintain a rigid, technical terminal look.",
+    "borders": "1px solid border-border (zinc-800). No soft shadows. Use inner highlights if elevation is needed."
+  },
+  "components": {
+    "cards": {
+      "style": "Technical Grid style. Flat background (bg-zinc-950 or zinc-900), strict 1px border. No shadows.",
+      "hover": "Subtle border-zinc-600 shift. No Y-translation."
+    },
+    "buttons": {
+      "primary": "Solid #007AFF bg, sharp corners, bold uppercase text. Hover: lighter hue.",
+      "buy": "Solid bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30 font-bold tracking-wider",
+      "sell": "Solid bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 font-bold tracking-wider",
+      "secondary": "Transparent bg, 1px border border-zinc-700, text-zinc-300. Hover: bg-zinc-800."
+    },
+    "tables": {
+      "style": "Dense (py-1 or py-2). Font-mono for numerical data. Right-aligned numbers, left-aligned text.",
+      "headers": "Uppercase, text-[10px] tracking-[0.2em] text-zinc-500 pb-2"
+    },
+    "tabs": {
+      "style": "Underline or solid block style. Sharp corners. Active state bright white text, inactive dim gray."
+    },
+    "ai_terminal": {
+      "style": "Retro-Futurism. Deep black background, text-zinc-400 or cyan-400 mono text. Typing effect. 1px border."
+    },
+    "indicators_badges": {
+      "active": "bg-zinc-800 text-white border border-zinc-600 px-2 py-1 text-xs font-mono",
+      "inactive": "bg-transparent text-zinc-500 border border-zinc-800 px-2 py-1 text-xs font-mono"
+    }
+  },
+  "motion": {
+    "transitions": "Fast, precise. 150ms ease-out. No bouncy animations.",
+    "data_updates": "Price flash (bg-green-500/20 or bg-red-500/20 to transparent over 1000ms).",
+    "hover": "Instant color shift, no scaling."
+  },
+  "image_urls": [
+    {
+      "url": "https://images.unsplash.com/photo-1707075891510-960cc9ecfcd3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwyfHxiaXRjb2luJTIwY3J5cHRvY3VycmVuY3klMjBjb2luc3xlbnwwfHx8fDE3NzYwMTg3NjV8MA&ixlib=rb-4.1.0&q=85",
+      "category": "asset_icon_fallback",
+      "description": "Bitcoin/Crypto placeholder icon or background texture for onboarding"
+    },
+    {
+      "url": "https://static.prod-images.emergentagent.com/jobs/881154ff-95d6-41b9-ace3-f531ee89f7cf/images/4b2dc19a29dc9a2cc0c3d5d9ac45e1e14230c123e6b4311feae0bac0d634a10f.png",
+      "category": "dashboard_background",
+      "description": "Abstract dark technical grid background. Use as an absolute position background with opacity-5 or 10 for the main dashboard to give it a tactical 'terminal' ambient feel."
+    }
+  ],
+  "accessibility": {
+    "contrast": "Ensure 4.5:1 ratio for text. Text over charts needs text-shadow or contrasting background.",
+    "focus": "Focus ring 2px solid Volt Blue (#007AFF) offset by 2px.",
+    "testing_attributes": "All interactive elements MUST have data-testid (e.g., data-testid='buy-button', data-testid='pair-selector', data-testid='indicator-toggle-rsi')."
+  },
+  "instructions_to_main_agent": [
+    "Build a heavy, dense 'Control Room' dashboard (Archetype 2 - Performance Pro) optimized for crypto trading.",
+    "UI MUST be dark mode only. Use zinc-950 for body background and zinc-900 for widgets with a 1px solid zinc-800 border (No rounded corners or max rounded-sm). No soft shadows, rely on borders for definition.",
+    "Install and use 'lightweight-charts' (TradingView) for the main price chart if possible, OR build a very dense Recharts area with custom candlestick shapes if lightweight-charts is not feasible. The user requested 'interfaz de tradinview', so styling must mimic it (crosshair, price labels on Y-axis).",
+    "Use Phosphor icons (@phosphor-icons/react) for sharp, technical iconography, or lucide-react as fallback.",
+    "Layout structure (Bento Control Room grid-cols-12): Top Toolbar (Pair selector, API connection status). Left Column (col-span-2/3) for 'Panel de Señales de Trading' and 'Detección de Nuevos Lanzamientos'. Center (col-span-6/7) for Main Chart and 'Panel de Indicadores Técnicos' (toggles for RSI, MACD, Bollinger Bands, EMA/SMA, Stochastic, ATR, Volume Profile). Right Column (col-span-3) for Order Book and 'Panel de Trading (Auto/Semi-auto)'. Bottom Row (col-span-12) for 'Historial de Operaciones'.",
+    "Include an 'Análisis con IA' section using the ai_terminal style (Retro-Futurism). Use a typewriter effect and font-mono for the AI evaluating market moves.",
+    "Build a 'Panel de Trading' to switch between Auto and Semi-Auto modes, with inputs for risk, leverage, and amount. Mock the Binance API connection visually (Connected/Disconnected badge).",
+    "Build an 'Historial de Operaciones' in a dense table layout (font-mono for numerical data, text-xs).",
+    "Do NOT use standard Shadcn Card unless you strip out the rounded-xl and shadows. Override it with technical grid styling (rounded-none, border-zinc-800).",
+    "Apply data-testid to EVERY button, tab, input, and interactive row.",
+    "Never use generic placeholder images. Use the generated abstract background for an empty state, login screen, or dashboard overlay with low opacity."
+  ]
+}
