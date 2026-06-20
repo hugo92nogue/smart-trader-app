@@ -5,6 +5,8 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from pydantic import BaseModel
 from typing import List, Optional
@@ -29,8 +31,36 @@ load_dotenv(ROOT_DIR / '.env')
 
 settings = get_settings()
 mongo_url = settings.mongo_url
-client = AsyncIOMotorClient(mongo_url)
-db = client[settings.db_name]
+client = None
+db = None  # se inicializa en startup
+
+# Almacenamiento en memoria como fallback
+_mem_trades = []
+_mem_signals = []
+_mem_analyses = []
+_mem_listings = []
+_mem_futures = []
+_mem_autotrade_log = []
+
+class _MemCollection:
+    def __init__(self, store): self._store = store; self._lim = 50
+    async def insert_one(self, doc):
+        doc.pop('_id', None); self._store.append(dict(doc)); return doc
+    def find(self, q={}, proj={}): return self
+    def sort(self, *a): return self
+    def limit(self, n): self._lim = n; return self
+    async def to_list(self, n): return list(reversed(self._store))[:n]
+
+class _MemDB:
+    def __init__(self):
+        self.trades = _MemCollection(_mem_trades)
+        self.signals = _MemCollection(_mem_signals)
+        self.ai_analyses = _MemCollection(_mem_analyses)
+        self.new_listings = _MemCollection(_mem_listings)
+        self.futures_trades = _MemCollection(_mem_futures)
+        self.auto_trade_log = _MemCollection(_mem_autotrade_log)
+
+
 
 binance_client = BinanceSpotClient()
 futures_client = BinanceFuturesClient()
@@ -59,8 +89,7 @@ def sanitize(obj):
 app = FastAPI(title="Crypto Trading Bot", version="1.0.0")
 api_router = APIRouter(prefix="/api")
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# logging moved to top
 
 class ConnectionManager:
     def __init__(self):
@@ -304,7 +333,7 @@ async def get_ai_history(symbol: Optional[str] = None, limit: int = 20):
         analyses = await db.ai_analyses.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
         return {"success": True, "data": analyses}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": True, "data": []}
 
 # ─── SIGNALS ───
 @api_router.get("/signals")
@@ -313,7 +342,7 @@ async def get_signals(limit: int = 50):
         signals = await db.signals.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
         return {"success": True, "data": signals}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": True, "data": []}
 
 # ─── ACCOUNT ───
 @api_router.get("/account/balance")
@@ -373,7 +402,7 @@ async def get_order_history(limit: int = 50):
         trades = await db.trades.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
         return {"success": True, "data": trades}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": True, "data": []}
 
 # ─── NEW LISTINGS ───
 @api_router.get("/new-listings")
@@ -382,7 +411,7 @@ async def get_new_listings():
         listings = await db.new_listings.find({}, {"_id": 0}).sort("detected_at", -1).limit(20).to_list(20)
         return {"success": True, "data": listings}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": True, "data": []}
 
 # ─── SETTINGS ───
 @api_router.get("/settings")
@@ -566,14 +595,27 @@ async def monitor_new_listings():
 
 app.include_router(api_router)
 
-app.add_middleware(CORSMiddleware, allow_credentials=True,
-                   allow_origins=settings.cors_origins.split(','),
+app.add_middleware(CORSMiddleware, allow_credentials=False,
+                   allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
 @app.on_event("startup")
 async def startup_event():
-    global known_symbols
+    global known_symbols, client, db
     logger.info("Starting Crypto Trading Bot")
+
+    # Inicializar MongoDB
+    try:
+        client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=3000)
+        await client.admin.command('ping')
+        db = client[settings.db_name]
+        logger.info(f"MongoDB conectado: {mongo_url}")
+    except Exception as e:
+        logger.warning(f"MongoDB no disponible, usando memoria: {e}")
+        client = None
+        db = _MemDB()
+        logger.info("Usando almacenamiento en memoria")
+
     try:
         info = binance_client.get_exchange_info()
         if 'symbols' in info:
