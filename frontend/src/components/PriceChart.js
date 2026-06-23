@@ -70,11 +70,12 @@ function formatKlineData(klines) {
   return { candleData, volumeData };
 }
 
-export default function PriceChart({ klines, symbol, interval }) {
+export default function PriceChart({ klines, symbol, interval, positions = [] }) {
   const chartRef = useRef(null);
   const containerRef = useRef(null);
   const candleSeriesRef = useRef(null);
   const volumeSeriesRef = useRef(null);
+  const priceLinesRef = useRef([]);
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
@@ -134,6 +135,34 @@ export default function PriceChart({ klines, symbol, interval }) {
       chartRef.current.timeScale().fitContent();
     }
   }, [klines]);
+
+  // Dibuja líneas de entrada / stop loss / take profit de las posiciones del activo.
+  useEffect(() => {
+    const series = candleSeriesRef.current;
+    if (!series) return;
+
+    // Limpia líneas anteriores
+    priceLinesRef.current.forEach((line) => {
+      try { series.removePriceLine(line); } catch (_) {}
+    });
+    priceLinesRef.current = [];
+
+    positions.forEach((p) => {
+      const isBuy = p.side === 'buy';
+      const sideTxt = isBuy ? 'LONG' : 'SHORT';
+      const add = (price, color, title) => {
+        if (price == null) return;
+        const line = series.createPriceLine({
+          price, color, lineWidth: 1, lineStyle: 2,
+          axisLabelVisible: true, title,
+        });
+        priceLinesRef.current.push(line);
+      };
+      add(p.entry_price, isBuy ? '#34C759' : '#FF3B30', `ENTRADA ${sideTxt}`);
+      add(p.stop_loss, '#f59e0b', 'STOP LOSS');
+      add(p.take_profit_1, '#06b6d4', 'TAKE PROFIT');
+    });
+  }, [positions, klines]);
 
   return (
     <div data-testid="price-chart" className="w-full h-full relative">

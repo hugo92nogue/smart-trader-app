@@ -207,11 +207,36 @@ class BinanceSpotClient:
             self._price_cache[symbol] = price
         return klines
 
+    def get_klines_paginated(self, symbol: str, interval: str, total: int = 5000) -> List:
+        """Descarga >1000 velas encadenando peticiones hacia atrás con endTime."""
+        out: List = []
+        end_time = None
+        while len(out) < total:
+            params = {"symbol": symbol, "interval": interval, "limit": 1000}
+            if end_time is not None:
+                params["endTime"] = end_time
+            batch = _public_get("klines", params)
+            if not batch:
+                break
+            out = batch + out
+            end_time = batch[0][0] - 1  # justo antes de la primera vela del lote
+            if len(batch) < 1000:
+                break  # no hay más historia disponible
+            time.sleep(0.15)  # respeta el rate limit
+        return out[-total:]
+
     def get_all_tickers(self) -> List[Dict]:
         data = _public_get("ticker/price")
         if data:
             return data
         return [{'symbol': p['symbol'], 'price': str(p['price'])} for p in DEMO_PAIRS]
+
+    def get_book_tickers(self) -> List[Dict]:
+        """Mejor bid/ask de TODOS los símbolos (para arbitraje triangular)."""
+        data = _public_get("ticker/bookTicker")
+        if data and isinstance(data, list):
+            return data
+        return []
 
     def get_account_balance(self) -> Optional[Dict]:
         if self.authenticated and self.client:

@@ -20,7 +20,7 @@ function SignalIcon({ signal }) {
 export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
   if (!data) return (
     <div data-testid="indicators-panel" className="p-3 space-y-2">
-      <h3 className="font-heading font-bold text-xs uppercase tracking-[0.2em] text-zinc-500">Indicadores</h3>
+      <h3 className="cs-title">Indicadores</h3>
       <p className="text-zinc-600 text-xs font-mono">Selecciona un par...</p>
     </div>
   );
@@ -29,12 +29,50 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
   const sniper = data.sniper_score || {};
   const confluence = data.confluence_score || {};
   const lr = data.linear_regression || {};
+  const pro = data.pro || {};
 
   return (
     <div data-testid="indicators-panel" className="p-3 space-y-3 overflow-y-auto max-h-full">
-      <h3 className="font-heading font-bold text-xs uppercase tracking-[0.2em] text-zinc-500 pb-1">
-        Indicadores Tecnicoss
+      <h3 className="cs-title pb-1">
+        Indicadores Técnicos
       </h3>
+
+      {/* Indicadores profesionales (VWAP, OBV, ADX, CVD, MFI) */}
+      {pro.vwap && (
+        <div className="cs-card p-2 space-y-1">
+          <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Profesionales</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono">
+            <div className="flex justify-between">
+              <span className="text-zinc-400">VWAP</span>
+              <span className={pro.vwap.above ? 'text-emerald-400' : 'text-red-400'}>
+                {pro.vwap.above ? '▲' : '▼'} {pro.vwap.distance_pct}%
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-400">ADX</span>
+              <span className={pro.adx?.strong ? (pro.adx.direction === 'bullish' ? 'text-emerald-400' : 'text-red-400') : 'text-zinc-300'}>
+                {pro.adx?.adx} {pro.adx?.strong ? '●' : '○'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-400">OBV</span>
+              <span className={pro.obv?.rising ? 'text-emerald-400' : 'text-red-400'}>{pro.obv?.trend}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-400">MFI</span>
+              <span className={pro.mfi?.overbought ? 'text-red-400' : pro.mfi?.oversold ? 'text-emerald-400' : 'text-zinc-300'}>
+                {pro.mfi?.mfi}
+              </span>
+            </div>
+            <div className="flex justify-between col-span-2">
+              <span className="text-zinc-400">CVD (presión)</span>
+              <span className={pro.cvd?.pressure === 'buyers' ? 'text-emerald-400' : pro.cvd?.pressure === 'sellers' ? 'text-red-400' : 'text-zinc-300'}>
+                {pro.cvd?.pressure === 'buyers' ? 'COMPRADORES' : pro.cvd?.pressure === 'sellers' ? 'VENDEDORES' : 'NEUTRAL'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toggle badges */}
       <div className="flex flex-wrap gap-1">
@@ -106,7 +144,7 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
       </div>
 
       {/* Sniper Score */}
-      <div className="border border-zinc-800 p-2 space-y-1">
+      <div className="cs-card p-2 space-y-1">
         <div className="flex items-center gap-1 text-xs font-mono">
           <Lightning size={12} className="text-yellow-400" weight="fill" />
           <span className="text-zinc-400 uppercase tracking-widest text-[10px]">Sniper Score</span>
@@ -132,7 +170,7 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
       </div>
 
       {/* Confluence Score */}
-      <div className="border border-zinc-800 p-2 space-y-1">
+      <div className="cs-card p-2 space-y-1">
         <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Precision Sniper</div>
         <div className="flex justify-between text-xs font-mono">
           <span className="text-emerald-400">Bull: {confluence.bull_score?.toFixed(1) || 0}/10</span>
@@ -149,7 +187,7 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
 
       {/* Linear Regression */}
       {lr.line > 0 && (
-        <div className="border border-zinc-800 p-2 space-y-1">
+        <div className="cs-card p-2 space-y-1">
           <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Reg. Lineal</div>
           <div className="text-xs font-mono space-y-0.5">
             <div className="flex justify-between"><span className="text-zinc-400">LR</span><span>{lr.line?.toFixed(2)}</span></div>
@@ -180,7 +218,7 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
 
       {/* Ichimoku */}
       {data.ichimoku && (
-        <div className="border border-zinc-800 p-2 space-y-1">
+        <div className="cs-card p-2 space-y-1">
           <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Ichimoku</div>
           <div className="text-xs font-mono space-y-0.5">
             <div className="flex justify-between"><span className="text-zinc-400">Tenkan</span><span>{data.ichimoku.tenkan?.toFixed(2)}</span></div>
@@ -202,7 +240,7 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
 
       {/* NeuroTrend */}
       {data.neurotrend && (
-        <div className="border border-zinc-800 p-2 space-y-1">
+        <div className="cs-card p-2 space-y-1">
           <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">NeuroTrend II</div>
           <div className={`text-xs font-mono font-bold ${
             data.neurotrend.trend_direction === 'Bullish' ? 'text-emerald-400' : 'text-red-400'
@@ -220,7 +258,7 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
 
       {/* SuperTrend RSI */}
       {data.supertrend_rsi && (
-        <div className="border border-zinc-800 p-2 space-y-1">
+        <div className="cs-card p-2 space-y-1">
           <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">SuperTrend RSI</div>
           <div className="flex justify-between text-xs font-mono">
             <span className="text-zinc-400">RSI</span>
@@ -236,7 +274,7 @@ export default function IndicatorsPanel({ data, activeIndicators, onToggle }) {
 
       {/* Turtle Channels */}
       {data.turtle_channels && (
-        <div className="border border-zinc-800 p-2 space-y-1">
+        <div className="cs-card p-2 space-y-1">
           <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Turtle Channels</div>
           <div className="text-xs font-mono space-y-0.5">
             <div className="flex justify-between"><span className="text-zinc-400">Upper</span><span>{data.turtle_channels.upper_channel?.toFixed(2)}</span></div>

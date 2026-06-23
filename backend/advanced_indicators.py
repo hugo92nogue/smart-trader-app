@@ -55,12 +55,16 @@ class SniperScore:
             else: bear+=1
             atr_val=float(_atr(h,l,c).iloc[-1])
             total=bull+bear
+            ema_cross_buy=bool(e9.iloc[-1]>e21.iloc[-1] and e9.iloc[-2]<=e21.iloc[-2])
+            ema_cross_sell=bool(e9.iloc[-1]<e21.iloc[-1] and e9.iloc[-2]>=e21.iloc[-2])
             return {
                 'bull_score':bull,'bear_score':bear,
                 'bull_pct':(bull/total*100) if total else 0,
                 'bear_pct':(bear/total*100) if total else 0,
                 'bias':'BULL' if bull>bear else 'BEAR' if bear>bull else 'NEUTRAL',
-                'atr_risk': atr_val
+                'atr_risk': atr_val,
+                'ema_cross_buy': ema_cross_buy,
+                'ema_cross_sell': ema_cross_sell,
             }
         except Exception as e:
             logger.error(f"SniperScore error: {e}")
@@ -90,7 +94,8 @@ class PrecisionSniperConfluence:
                 else: bear+=2
             if volumes and v.iloc[-1]>va.iloc[-1]*1.5: bull+=0.5; bear+=0.5
             grade='A+' if bull>=7 else 'A' if bull>=5 else 'B' if bull>=3 else 'C'
-            return {'bull_score':bull,'bear_score':bear,'grade':grade}
+            signal='buy' if bull>bear+2 else 'sell' if bear>bull+2 else 'neutral'
+            return {'bull_score':bull,'bear_score':bear,'grade':grade,'signal':signal,'adx':float(adx.iloc[-1])}
         except Exception as e:
             logger.error(f"PrecisionSniperConfluence error: {e}")
             return {'bull_score':0,'bear_score':0,'grade':'C'}
@@ -119,7 +124,7 @@ class SwingProfile:
     @staticmethod
     def calculate(closes, highs, lows, volumes=None) -> Dict:
         try:
-            trend='UP' if closes[-1]>np.mean(closes[-20:]) else 'DOWN'
+            trend='UPTREND' if closes[-1]>np.mean(closes[-20:]) else 'DOWNTREND'
             return {
                 'trend':trend,
                 'last_high':max(highs[-20:]),
@@ -138,8 +143,8 @@ class FairValueGaps:
             for i in range(2,min(len(closes),50)):
                 ph=highs[i-2]; pl=lows[i-2]
                 ch=highs[i];   cl=lows[i]
-                if cl>ph: gaps.append({'type':'BULL','low':ph,'high':cl,'mid':(ph+cl)/2})
-                elif ch<pl: gaps.append({'type':'BEAR','low':ch,'high':pl,'mid':(ch+pl)/2})
+                if cl>ph: gaps.append({'type':'BULLISH','low':ph,'high':cl,'mid':(ph+cl)/2})
+                elif ch<pl: gaps.append({'type':'BEARISH','low':ch,'high':pl,'mid':(ch+pl)/2})
             return {'gaps':gaps[-3:] if gaps else []}
         except Exception as e:
             logger.error(f"FairValueGaps error: {e}")
@@ -157,11 +162,13 @@ class CommissionAwareSignalEngine:
             reward=abs(take_profit-entry_price)
             cost=entry_price*commission_rate*2
             rr=reward/risk if risk>0 else 0
+            profit_pct=round((reward/entry_price)*100, 4) if entry_price>0 else 0
             return {
                 'viable': reward>cost*3 and rr>=1.5,
                 'rr_ratio': round(rr,2),
                 'commission_cost': round(cost,6),
-                'potential_profit': round(reward,6)
+                'potential_profit': round(reward,6),
+                'profit_pct': profit_pct,
             }
         except Exception as e:
             logger.error(f"CommissionAwareSignalEngine error: {e}")
@@ -199,11 +206,18 @@ class NeuroTrendII:
             c=pd.Series(closes); h=pd.Series(highs); l=pd.Series(lows)
             ema=_ema(c,20); atr=_atr(h,l,c,14)
             trend='up' if c.iloc[-1]>ema.iloc[-1] else 'down'
+            strength=float(abs(c.iloc[-1]-ema.iloc[-1])/atr.iloc[-1]) if atr.iloc[-1]>0 else 0
+            slope_power=round(float((c.iloc[-1]-ema.iloc[-1])/atr.iloc[-1]) if atr.iloc[-1]>0 else 0, 2)
             return {
-                'trend':trend,'ema':float(ema.iloc[-1]),
+                'trend':trend,
+                'trend_direction':'Bullish' if trend=='up' else 'Bearish',
+                'phase':'Expansion' if strength>1.0 else 'Contraction',
+                'confidence':min(int(strength*50), 100),
+                'slope_power':slope_power,
+                'ema':float(ema.iloc[-1]),
                 'upper_band':float(ema.iloc[-1]+atr.iloc[-1]*2),
                 'lower_band':float(ema.iloc[-1]-atr.iloc[-1]*2),
-                'strength':float(abs(c.iloc[-1]-ema.iloc[-1])/atr.iloc[-1]) if atr.iloc[-1]>0 else 0
+                'strength':strength,
             }
         except Exception as e:
             logger.error(f"NeuroTrendII error: {e}")
@@ -219,8 +233,9 @@ class SuperTrendedRSI:
             hl2=(h+l)/2
             rv=float(rsi.iloc[-1])
             signal='buy' if rv<30 else 'sell' if rv>70 else 'neutral'
+            trend='bullish' if rv>=50 else 'bearish'
             return {
-                'rsi':rv,'signal':signal,
+                'rsi':rv,'signal':signal,'trend':trend,
                 'upper_band':float(hl2.iloc[-1]+atr.iloc[-1]*3),
                 'lower_band':float(hl2.iloc[-1]-atr.iloc[-1]*3),
                 'overbought':rv>70,'oversold':rv<30
@@ -242,12 +257,94 @@ class TurtleChannels:
             u=float(upper.iloc[-1]); lo=float(lower.iloc[-1])
             signal='buy' if price>=u else 'sell' if price<=lo else 'neutral'
             return {
-                'upper':u,'lower':lo,'middle':float(mid.iloc[-1]),
+                'upper_channel':u,'lower_channel':lo,'middle':float(mid.iloc[-1]),
                 'signal':signal,'breakout_up':price>=u,'breakout_down':price<=lo
             }
         except Exception as e:
             logger.error(f"TurtleChannels error: {e}")
             return {'signal':'neutral','breakout_up':False,'breakout_down':False}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Indicadores profesionales adicionales (muy usados por exchanges/instituciones)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class VWAP:
+    """Volume Weighted Average Price — precio medio ponderado por volumen."""
+    @staticmethod
+    def calculate(closes, highs, lows, volumes) -> Dict:
+        try:
+            h=pd.Series(highs); l=pd.Series(lows); c=pd.Series(closes); v=pd.Series(volumes)
+            tp=(h+l+c)/3
+            cum_v=v.cumsum().replace(0, np.nan)
+            vwap=(tp*v).cumsum()/cum_v
+            price=float(c.iloc[-1]); val=float(vwap.iloc[-1])
+            return {'vwap':val,'above':price>val,
+                    'distance_pct':round((price-val)/val*100, 3) if val else 0}
+        except Exception as e:
+            logger.error(f"VWAP error: {e}"); return {'vwap':0,'above':False}
+
+
+class OBV:
+    """On-Balance Volume — acumulación/distribución por volumen y dirección."""
+    @staticmethod
+    def calculate(closes, volumes) -> Dict:
+        try:
+            c=pd.Series(closes); v=pd.Series(volumes)
+            direction=np.sign(c.diff()).fillna(0)
+            obv=(direction*v).cumsum()
+            slope=float(obv.iloc[-1]-obv.iloc[-10]) if len(obv)>10 else 0
+            return {'obv':float(obv.iloc[-1]),
+                    'trend':'up' if slope>0 else 'down' if slope<0 else 'flat','rising':slope>0}
+        except Exception as e:
+            logger.error(f"OBV error: {e}"); return {'obv':0,'trend':'flat'}
+
+
+class ADXIndicator:
+    """Average Directional Index — fuerza de la tendencia (>25 = tendencia fuerte)."""
+    @staticmethod
+    def calculate(closes, highs, lows, period=14) -> Dict:
+        try:
+            adx,pdi,mdi=_adx(highs,lows,closes,period)
+            a=float(adx.iloc[-1]); p=float(pdi.iloc[-1]); m=float(mdi.iloc[-1])
+            return {'adx':round(a,2),'plus_di':round(p,2),'minus_di':round(m,2),
+                    'strong':a>25,'direction':'bullish' if p>m else 'bearish'}
+        except Exception as e:
+            logger.error(f"ADX error: {e}"); return {'adx':0,'strong':False}
+
+
+class CVD:
+    """Cumulative Volume Delta — presión compradora vs vendedora acumulada."""
+    @staticmethod
+    def calculate(closes, opens, volumes) -> Dict:
+        try:
+            c=pd.Series(closes)
+            o=pd.Series(opens) if opens is not None and len(opens) else c.shift(1).fillna(c.iloc[0])
+            v=pd.Series(volumes)
+            delta=np.where(c>=o, v, -v)
+            cvd=pd.Series(delta).cumsum()
+            slope=float(cvd.iloc[-1]-cvd.iloc[-10]) if len(cvd)>10 else 0
+            return {'cvd':float(cvd.iloc[-1]),
+                    'pressure':'buyers' if slope>0 else 'sellers' if slope<0 else 'neutral'}
+        except Exception as e:
+            logger.error(f"CVD error: {e}"); return {'cvd':0,'pressure':'neutral'}
+
+
+class MFI:
+    """Money Flow Index — RSI ponderado por volumen (sobrecompra>80, sobreventa<20)."""
+    @staticmethod
+    def calculate(closes, highs, lows, volumes, period=14) -> Dict:
+        try:
+            h=pd.Series(highs); l=pd.Series(lows); c=pd.Series(closes); v=pd.Series(volumes)
+            tp=(h+l+c)/3; mf=tp*v
+            pos=mf.where(tp>tp.shift(1), 0.0).rolling(period).sum()
+            neg=mf.where(tp<tp.shift(1), 0.0).rolling(period).sum().replace(0, np.nan)
+            mfi=100-(100/(1+pos/neg))
+            val=float(mfi.iloc[-1])
+            return {'mfi':round(val,2),'overbought':val>80,'oversold':val<20,
+                    'signal':'sell' if val>80 else 'buy' if val<20 else 'neutral'}
+        except Exception as e:
+            logger.error(f"MFI error: {e}"); return {'mfi':50,'signal':'neutral'}
 
 
 # Clase principal para compatibilidad con código que use AdvancedIndicators()

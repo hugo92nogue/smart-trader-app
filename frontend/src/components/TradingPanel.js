@@ -44,7 +44,7 @@ export default function TradingPanel({ symbol, price, balance, onOrderPlaced }) 
   return (
     <div data-testid="trading-panel" className="p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-heading font-bold text-xs uppercase tracking-[0.2em] text-zinc-500">Trading</h3>
+        <h3 className="cs-title">Trading</h3>
         <div className="flex items-center gap-1">
           <Robot size={12} className="text-purple-400" />
           <select data-testid="trading-mode-select" value={mode} onChange={(e) => setMode(e.target.value)}

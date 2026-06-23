@@ -72,12 +72,12 @@ export default function SignalsPanel({ signals, indicators }) {
 
   return (
     <div data-testid="signals-panel" className="p-3 space-y-2 overflow-y-auto max-h-full">
-      <h3 className="font-heading font-bold text-xs uppercase tracking-[0.2em] text-zinc-500 pb-1">
-        Senales de Trading
+      <h3 className="cs-title pb-1">
+        Señales de Trading
       </h3>
 
       {allSignals.length === 0 ? (
-        <p className="text-zinc-600 text-xs font-mono">Sin senales activas</p>
+        <p className="text-zinc-600 text-xs font-mono">Sin señales activas</p>
       ) : (
         <div className="space-y-1">
           {allSignals.map((sig, i) => {
@@ -122,7 +122,7 @@ export default function SignalsPanel({ signals, indicators }) {
 
       {/* FVG Levels */}
       {indicators?.fvg?.gaps?.length > 0 && (
-        <div className="border border-zinc-800 p-2 mt-2">
+        <div className="cs-card p-2 mt-2">
           <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono mb-1">Fair Value Gaps</div>
           {indicators.fvg.gaps.slice(0, 3).map((gap) => (
             <div key={`${gap.type}-${gap.low}-${gap.high}`} className="flex justify-between text-[10px] font-mono py-0.5">
@@ -135,7 +135,7 @@ export default function SignalsPanel({ signals, indicators }) {
 
       {/* Swing Profile */}
       {indicators?.swing_profile?.trend && (
-        <div className="border border-zinc-800 p-2">
+        <div className="cs-card p-2">
           <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono mb-1">Swing Profile</div>
           <div className={`text-xs font-mono font-bold ${
             indicators.swing_profile.trend === 'UPTREND' ? 'text-emerald-400' :

@@ -6,7 +6,7 @@ export default function NewListingsPanel({ listings }) {
     <div data-testid="new-listings-panel" className="p-3 space-y-2">
       <div className="flex items-center gap-2">
         <Rocket size={14} className="text-cyan-400" weight="fill" />
-        <h3 className="font-heading font-bold text-xs uppercase tracking-[0.2em] text-zinc-500">
+        <h3 className="cs-title">
           Nuevos Lanzamientos
         </h3>
       </div>

@@ -13,10 +13,13 @@ import SignalsPanel from './components/SignalsPanel';
 import TradeHistory from './components/TradeHistory';
 import PairSelector from './components/PairSelector';
 import NewListingsPanel from './components/NewListingsPanel';
+import EnginePanel from './components/EnginePanel';
+import BacktestPanel from './components/BacktestPanel';
+import ArbitragePanel from './components/ArbitragePanel';
 import {
   fetchPairs, fetchKlines, fetchIndicators, fetchBalance,
   fetchOrderHistory, fetchNewListings, fetchHealth, fetchSignals,
-  toggleAutoTrade, createPriceWebSocket
+  toggleAutoTrade, createPriceWebSocket, fetchEngineStatus, fetchStocksList
 } from './api';
 
 const INTERVALS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -66,6 +69,7 @@ function usePriceWebSocket(selectedPair) {
 // ── Custom hook: initial data ──
 function useInitialData() {
   const [pairs, setPairs] = useState([]);
+  const [stocks, setStocks] = useState([]);
   const [balance, setBalance] = useState(null);
   const [newListings, setNewListings] = useState([]);
   const [connected, setConnected] = useState(false);
@@ -85,6 +89,12 @@ function useInitialData() {
         console.error('Error loading pairs:', e);
       }
       try {
+        const stocksRes = await fetchStocksList();
+        setStocks(stocksRes.data.data || []);
+      } catch (e) {
+        console.error('Error loading stocks:', e);
+      }
+      try {
         const balRes = await fetchBalance();
         setBalance(balRes.data.data?.balances || balRes.data.data?.demo_balance);
       } catch (e) {
@@ -100,7 +110,7 @@ function useInitialData() {
     init();
   }, []);
 
-  return { pairs, balance, newListings, connected };
+  return { pairs, stocks, balance, newListings, connected };
 }
 
 // ── Dashboard ──
@@ -118,8 +128,11 @@ function Dashboard() {
   const [currentPrice, setCurrentPrice] = useState(null);
   const [priceChange, setPriceChange] = useState(null);
   const [autoTradeEnabled, setAutoTradeEnabled] = useState(false);
+  const [bottomTab, setBottomTab] = useState('ai');  // 'ai' | 'backtest' | 'arbitrage'
+  const [enginePositions, setEnginePositions] = useState([]);
+  const [market, setMarket] = useState('crypto');  // 'crypto' | 'stocks'
 
-  const { pairs, balance, newListings, connected } = useInitialData();
+  const { pairs, stocks, balance, newListings, connected } = useInitialData();
   const { wsConnected, livePrice } = usePriceWebSocket(selectedPair);
 
   // Apply live WS price
@@ -129,34 +142,38 @@ function Dashboard() {
     }
   }, [livePrice]);
 
-  // Load data for selected pair
+  // Load data for selected pair.
+  // allSettled (no all): si falla indicadores, el GRÁFICO (klines) igual se actualiza.
   const loadPairData = useCallback(async () => {
     if (!selectedPair) return;
     setLoading(true);
-    try {
-      const [klinesRes, indRes, tradesRes, signalsRes] = await Promise.all([
-        fetchKlines(selectedPair, interval, 200),
-        fetchIndicators(selectedPair, interval),
-        fetchOrderHistory(50),
-        fetchSignals(50)
-      ]);
+    const [klinesRes, indRes, tradesRes, signalsRes, engineRes] = await Promise.allSettled([
+      fetchKlines(selectedPair, interval, 200),
+      fetchIndicators(selectedPair, interval),
+      fetchOrderHistory(50),
+      fetchSignals(50),
+      fetchEngineStatus()
+    ]);
 
-      setKlines(klinesRes.data.data || []);
-      setIndicators(indRes.data.data || null);
-      setTrades(tradesRes.data.data || []);
-      setSignals(signalsRes.data.data || []);
-
-      const lastKline = klinesRes.data.data?.slice(-1)[0];
+    if (klinesRes.status === 'fulfilled') {
+      const data = klinesRes.value.data.data || [];
+      setKlines(data);
+      const lastKline = data.slice(-1)[0];
       if (lastKline) {
         setCurrentPrice(lastKline.close);
-        const firstKline = klinesRes.data.data?.[0];
+        const firstKline = data[0];
         if (firstKline) {
           setPriceChange(((lastKline.close - firstKline.open) / firstKline.open * 100));
         }
       }
-    } catch (e) {
-      console.error('Error loading pair data:', e);
+    } else {
+      console.error('Error cargando velas:', klinesRes.reason);
     }
+    if (indRes.status === 'fulfilled') setIndicators(indRes.value.data.data || null);
+    if (tradesRes.status === 'fulfilled') setTrades(tradesRes.value.data.data || []);
+    if (signalsRes.status === 'fulfilled') setSignals(signalsRes.value.data.data || []);
+    if (engineRes.status === 'fulfilled') setEnginePositions(engineRes.value.data.data?.open_positions || []);
+
     setLoading(false);
   }, [selectedPair, interval]);
 
@@ -166,8 +183,11 @@ function Dashboard() {
     return () => window.clearInterval(timer);
   }, [loadPairData]);
 
-  const handlePairSelect = useCallback((symbol) => {
+  const handlePairSelect = useCallback((symbol, mkt = 'crypto') => {
     setSelectedPair(symbol);
+    setMarket(mkt);
+    // Acciones = horizonte largo → velas diarias por defecto.
+    if (mkt === 'stocks') setInterval_('1d');
     setShowPairSelector(false);
     setPairSearch('');
   }, []);
@@ -214,13 +234,21 @@ function Dashboard() {
               onClick={() => setShowPairSelector(!showPairSelector)}
               className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-colors"
             >
-              <span className="font-mono font-bold text-sm text-white">{selectedPair?.replace('USDT', '')}</span>
-              <span className="text-[10px] text-zinc-500 font-mono">/USDT</span>
+              <span className="font-mono font-bold text-sm text-white">{market === 'stocks' ? selectedPair : selectedPair?.replace('USDT', '')}</span>
+              <span className="text-[10px] text-zinc-500 font-mono">{market === 'stocks' ? 'ACCIÓN' : '/USDT'}</span>
               <CaretDown size={10} className="text-zinc-500" />
             </button>
             {showPairSelector && (
               <div className="absolute top-full left-0 mt-1 z-50 w-80">
-                <PairSelector pairs={pairs} selectedPair={selectedPair} onSelect={handlePairSelect} searchQuery={pairSearch} onSearchChange={setPairSearch} />
+                <PairSelector
+                  pairs={pairs}
+                  stocks={stocks}
+                  market={market}
+                  selectedPair={selectedPair}
+                  onSelect={handlePairSelect}
+                  searchQuery={pairSearch}
+                  onSearchChange={setPairSearch}
+                />
               </div>
             )}
           </div>
@@ -263,29 +291,60 @@ function Dashboard() {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <div className="flex-1 grid grid-cols-12 gap-0 overflow-hidden">
-        <div className="col-span-2 border-r border-zinc-800 overflow-y-auto flex flex-col">
-          <div className="flex-1 border-b border-zinc-800"><SignalsPanel signals={signals} indicators={indicators} /></div>
-          <div><NewListingsPanel listings={newListings} /></div>
+        <div className="col-span-3 border-r border-zinc-800 overflow-y-auto flex flex-col cs-col">
+          <div className="cs-divider"><EnginePanel /></div>
+          <div className="flex-1 cs-divider"><SignalsPanel signals={signals} indicators={indicators} /></div>
+          <div className="cs-divider"><NewListingsPanel listings={newListings} /></div>
         </div>
 
-        <div className="col-span-7 flex flex-col overflow-hidden">
-          <div className="flex-1 border-b border-zinc-800" style={{ minHeight: '400px' }}>
-            <PriceChart klines={klines} symbol={selectedPair} interval={interval} />
+        <div className="col-span-6 flex flex-col overflow-hidden">
+          <div className="flex-1 border-b border-zinc-800" style={{ minHeight: '360px' }}>
+            <PriceChart
+              klines={klines}
+              symbol={selectedPair}
+              interval={interval}
+              positions={enginePositions.filter(p => p.symbol === selectedPair)}
+            />
           </div>
-          <div style={{ height: '220px' }}><AITerminal symbol={selectedPair} interval={interval} /></div>
+          <div className="flex flex-col" style={{ height: '260px' }}>
+            {/* Pestañas: IA / Backtest / Arbitraje */}
+            <div className="flex border-b border-zinc-800 bg-zinc-950">
+              {[
+                { id: 'ai', label: 'Terminal IA' },
+                { id: 'backtest', label: 'Backtest' },
+                { id: 'arbitrage', label: 'Arbitraje' },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  data-testid={`bottom-tab-${t.id}`}
+                  onClick={() => setBottomTab(t.id)}
+                  className={`px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider border-r border-zinc-800 transition-colors ${
+                    bottomTab === t.id ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {bottomTab === 'ai' && <AITerminal symbol={selectedPair} interval={interval} />}
+              {bottomTab === 'backtest' && <BacktestPanel symbol={selectedPair} interval={interval} />}
+              {bottomTab === 'arbitrage' && <ArbitragePanel />}
+            </div>
+          </div>
         </div>
 
-        <div className="col-span-3 border-l border-zinc-800 overflow-y-auto flex flex-col">
-          <div className="flex-1 border-b border-zinc-800 overflow-y-auto">
+        <div className="col-span-3 border-l border-zinc-800 overflow-y-auto flex flex-col cs-col">
+          <div className="flex-1 cs-divider overflow-y-auto">
             <IndicatorsPanel data={indicators} activeIndicators={activeIndicators} onToggle={handleToggleIndicator} />
           </div>
-          <div className="border-b border-zinc-800">
+          <div className="cs-divider">
             <TradingPanel symbol={selectedPair} price={currentPrice} balance={balance} onOrderPlaced={loadPairData} />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-zinc-800 overflow-y-auto" style={{ maxHeight: '200px' }}>
+      <div className="border-t border-zinc-800 overflow-y-auto cs-col" style={{ maxHeight: '200px' }}>
         <TradeHistory trades={trades} />
       </div>
 

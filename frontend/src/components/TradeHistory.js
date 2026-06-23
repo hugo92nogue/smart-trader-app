@@ -5,7 +5,7 @@ export default function TradeHistory({ trades }) {
   if (!trades || trades.length === 0) {
     return (
       <div data-testid="trade-history" className="p-3">
-        <h3 className="font-heading font-bold text-xs uppercase tracking-[0.2em] text-zinc-500 pb-2">
+        <h3 className="cs-title pb-2">
           Historial de Operaciones
         </h3>
         <p className="text-zinc-600 text-xs font-mono text-center py-4">Sin operaciones registradas</p>
@@ -15,7 +15,7 @@ export default function TradeHistory({ trades }) {
 
   return (
     <div data-testid="trade-history" className="p-3">
-      <h3 className="font-heading font-bold text-xs uppercase tracking-[0.2em] text-zinc-500 pb-2">
+      <h3 className="cs-title pb-2">
         Historial de Operaciones
       </h3>
       <div className="overflow-x-auto">

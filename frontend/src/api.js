@@ -34,6 +34,36 @@ export const fetchFuturesPositions = () => api.get('/futures/positions');
 export const fetchFuturesBalance = () => api.get('/futures/balance');
 export const fetchFuturesHistory = (limit = 50) => api.get(`/futures/history?limit=${limit}`);
 
+// Exchanges
+export const fetchExchanges = () => api.get('/exchanges');
+export const setActiveExchange = (name) => api.post('/exchanges/active', { name });
+
+// Auto-trade Engine
+export const fetchEngineStatus = () => api.get('/engine/status');
+export const startEngine = () => api.post('/engine/start');
+export const stopEngine = () => api.post('/engine/stop');
+export const closeAllPositions = () => api.post('/engine/close-all');
+export const updateEngineConfig = (config) => api.post('/engine/config', config);
+
+// Backtesting
+export const runBacktest = (params) => api.post('/backtest/run', params);
+
+// Stocks / mercados tradicionales
+export const fetchStocksList = () => api.get('/stocks/list');
+export const fetchStockKlines = (symbol, interval = '1d', limit = 500) =>
+  api.get(`/stocks/${symbol}/klines?interval=${interval}&limit=${limit}`);
+
+// Arbitrage (cross-exchange)
+export const fetchArbitrageStatus = () => api.get('/arbitrage/status');
+export const startArbitrage = () => api.post('/arbitrage/start');
+export const stopArbitrage = () => api.post('/arbitrage/stop');
+export const updateArbitrageConfig = (config) => api.post('/arbitrage/config', config);
+
+// Arbitrage (triangular, single exchange)
+export const fetchTriangularStatus = () => api.get('/arbitrage/triangular/status');
+export const startTriangular = () => api.post('/arbitrage/triangular/start');
+export const stopTriangular = () => api.post('/arbitrage/triangular/stop');
+
 // WebSocket
 export const createPriceWebSocket = (onMessage) => {
   const wsUrl = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');

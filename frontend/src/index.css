@@ -28,18 +28,83 @@ code {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
 }
 ::-webkit-scrollbar-track {
-    background: #09090b;
+    background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: #27272a;
-    border-radius: 0;
+    background: #3a3631;
+    border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #3f3f46;
+    background: #d97757;
+}
+
+/* ====== Claude Design — capa visual de paneles ====== */
+:root {
+    --cs-accent: #d97757;       /* coral Anthropic */
+    --cs-accent-soft: rgba(217, 119, 87, 0.14);
+    --cs-surface: #121214;
+    --cs-surface-2: #161618;
+    --cs-border: #26262b;
+}
+
+/* Columna lateral: fondo cálido sutil y separación elegante */
+.cs-col {
+    background:
+        radial-gradient(120% 60% at 50% 0%, rgba(217,119,87,0.05) 0%, transparent 60%),
+        linear-gradient(180deg, #0d0d0f 0%, #09090b 100%);
+}
+
+/* Cabecera de sección con barra de acento coral */
+.cs-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Chivo', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #d4d4d8;
+}
+.cs-title::before {
+    content: '';
+    width: 3px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--cs-accent);
+    box-shadow: 0 0 8px rgba(217,119,87,0.5);
+}
+
+/* Tarjeta elevada con bordes redondeados */
+.cs-card {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: 10px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.cs-card:hover {
+    border-color: #34343a;
+}
+
+/* Separador suave entre secciones */
+.cs-divider {
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Botón de acción primario estilo Claude */
+.cs-btn-accent {
+    background: var(--cs-accent-soft);
+    border: 1px solid rgba(217,119,87,0.45);
+    color: #e8a589;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+.cs-btn-accent:hover {
+    background: rgba(217,119,87,0.24);
 }
 
 /* Price flash animations */
