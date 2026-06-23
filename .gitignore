@@ -46,3 +46,7 @@ logs/
 
 # MongoDB
 data/db/
+
+# Build / instaladores (binarios pesados, regenerables con `npm run dist`)
+/release/
+*.exe
